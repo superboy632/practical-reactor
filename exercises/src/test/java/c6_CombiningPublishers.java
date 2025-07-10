@@ -42,7 +42,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
         //todo: feel free to change code as you need
         Mono<String> currentUserEmail = null;
         Mono<String> currentUserMono = getCurrentUser();
-        getUserEmail(null);
+
+        currentUserEmail = currentUserMono.flatMap(this::getUserEmail);
 
         //don't change below this line
         StepVerifier.create(currentUserEmail)
@@ -56,12 +57,16 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
      *
      * Answer:
      * - Is there a difference between Mono.flatMap() and Flux.flatMap()?
+     * ANSWER: yes, Mono.flatMap() working with 1 element and return new Mono with asynchronously mapped value.
+     * Flux.flatMap() transform the elements into the publishers, then flatten into a single FLux
      */
     @Test
     public void task_executor() {
         //todo: feel free to change code as you need
         Flux<Void> tasks = null;
-        taskExecutor();
+
+        Flux<Mono<Void>> task = taskExecutor();
+        tasks = task.flatMap(u -> u);
 
         //don't change below this line
         StepVerifier.create(tasks)
@@ -80,7 +85,9 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void streaming_service() {
         //todo: feel free to change code as you need
         Flux<Message> messageFlux = null;
-        streamingService();
+
+        Mono<Flux<Message>> message = streamingService();
+        messageFlux = message.flatMapMany(u -> u);
 
         //don't change below this line
         StepVerifier.create(messageFlux)

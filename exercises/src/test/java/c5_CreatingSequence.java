@@ -256,19 +256,36 @@ public class c5_CreatingSequence {
     @Test
     public void generate_programmatically() {
 
-        Flux<Integer> generateFlux = Flux.generate(sink -> {
+        Flux<Integer> generateFlux = Flux.generate(
+                () -> 0,
+                (state, sink) -> {
+            if (state <= 5) {
+                sink.next(state);
+            } else {
+                sink.complete();
+            }
+            return state + 1;
             //todo: fix following code so it emits values from 0 to 5 and then completes
         });
 
         //------------------------------------------------------
 
         Flux<Integer> createFlux = Flux.create(sink -> {
+            for(int i = 0; i <= 5; i++) {
+                sink.next(i);
+            }
+            sink.complete();
+
             //todo: fix following code so it emits values from 0 to 5 and then completes
         });
 
         //------------------------------------------------------
 
         Flux<Integer> pushFlux = Flux.push(sink -> {
+            for(int i = 0; i <= 5; i++) {
+                sink.next(i);
+            }
+            sink.complete();
             //todo: fix following code so it emits values from 0 to 5 and then completes
         });
 
@@ -291,11 +308,12 @@ public class c5_CreatingSequence {
     @Test
     public void multi_threaded_producer() {
         //todo: find a bug and fix it!
-        Flux<Integer> producer = Flux.push(sink -> {
-            for (int i = 0; i < 100; i++) {
+        Flux<Integer> producer = Flux.create(sink -> {
+            for (int i = 0; i <= 100; i++) {
                 int finalI = i;
                 new Thread(() -> sink.next(finalI)).start(); //don't change this line!
             }
+            sink.complete();
         });
 
         //do not change code below
