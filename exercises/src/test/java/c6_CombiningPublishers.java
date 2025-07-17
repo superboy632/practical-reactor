@@ -10,6 +10,8 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static reactor.core.publisher.Mono.when;
+
 /**
  * In this important chapter we are going to cover different ways of combining publishers.
  *
@@ -106,8 +108,10 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void i_am_rubber_you_are_glue() {
         //todo: feel free to change code as you need
         Flux<Integer> numbers = null;
-        numberService1();
-        numberService2();
+        Flux<Integer> service1 = numberService1();
+        Flux<Integer> service2 = numberService2();
+        numbers = service1.concatWith(service2);
+        // numbers = service1.mergeWith(service2);
 
         //don't change below this line
         StepVerifier.create(numbers)
@@ -132,7 +136,8 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void task_executor_again() {
         //todo: feel free to change code as you need
         Flux<Void> tasks = null;
-        taskExecutor();
+        Flux<Mono<Void>> task = taskExecutor();
+        tasks = task.concatMap(u -> u);
 
         //don't change below this line
         StepVerifier.create(tasks)
@@ -150,8 +155,10 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void need_for_speed() {
         //todo: feel free to change code as you need
         Flux<String> stonks = null;
-        getStocksGrpc();
-        getStocksRest();
+        Flux<String> grpc = getStocksGrpc();
+        Flux<String> rest = getStocksRest();
+        stonks = Flux.firstWithValue(grpc, rest);
+
 
         //don't change below this line
         StepVerifier.create(stonks)
@@ -168,8 +175,9 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void plan_b() {
         //todo: feel free to change code as you need
         Flux<String> stonks = null;
-        getStocksLocalCache();
-        getStocksRest();
+        Flux<String> getFromCache = getStocksLocalCache();
+        Flux<String> getFromRest = getStocksRest();
+        stonks = getFromCache.switchIfEmpty(getFromRest);
 
         //don't change below this line
         StepVerifier.create(stonks)
@@ -187,8 +195,15 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void mail_box_switcher() {
         //todo: feel free to change code as you need
         Flux<Message> myMail = null;
-        mailBoxPrimary();
-        mailBoxSecondary();
+        Flux<Message> spam = mailBoxPrimary();
+        Flux<Message> message = mailBoxSecondary();
+        myMail = spam.switchOnFirst((signal, flux) -> {
+            Message firstMessage = signal.get();
+            if (firstMessage.metaData.equals("spam")) {
+                return message;
+            }
+            return flux;
+        });
 
         //don't change below this line
         StepVerifier.create(myMail)
@@ -209,8 +224,9 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void instant_search() {
         //todo: feel free to change code as you need
-        autoComplete(null);
+
         Flux<String> suggestions = userSearchInput()
+                .switchMap(this::autoComplete)
                 //todo: use one operator only
                 ;
 
@@ -232,10 +248,10 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
         //todo: use when,and,then...
         Mono<Boolean> successful = null;
 
-        openFile();
-        writeToFile("0x3522285912341");
-        closeFile();
-
+        successful = openFile()
+                .then(writeToFile("0x3522285912341"))
+                .then(closeFile())
+                .then(Mono.just(true));
         //don't change below this line
         StepVerifier.create(successful)
                     .expectNext(true)
@@ -252,9 +268,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void one_to_n() {
         //todo: feel free to change code as you need
-        Flux<String> fileLines = null;
-        openFile();
-        readFile();
+        Flux<String> fileLines = openFile().thenMany(readFile());
 
         StepVerifier.create(fileLines)
                     .expectNext("0x1", "0x2", "0x3")
@@ -268,7 +282,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void acid_durability() {
         //todo: feel free to change code as you need
-        Flux<String> committedTasksIds = null;
+        Flux<String> committedTasksIds = tasksToExecute().then(commitTask(null));
         tasksToExecute();
         commitTask(null);
 
