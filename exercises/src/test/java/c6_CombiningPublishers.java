@@ -10,6 +10,9 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static reactor.core.publisher.Flux.merge;
+import static reactor.core.publisher.Flux.mergeComparing;
+import static reactor.core.publisher.Mono.defer;
 import static reactor.core.publisher.Mono.when;
 
 /**
@@ -282,9 +285,10 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void acid_durability() {
         //todo: feel free to change code as you need
-        Flux<String> committedTasksIds = tasksToExecute().then(commitTask(null));
-        tasksToExecute();
-        commitTask(null);
+        Flux<String> committedTasksIds = tasksToExecute()
+                .concatMap(taskId ->
+                        commitTask(taskId.toString())
+                        .then(taskId));
 
         //don't change below this line
         StepVerifier.create(committedTasksIds)
@@ -303,8 +307,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void major_merger() {
         //todo: feel free to change code as you need
         Flux<String> microsoftBlizzardCorp =
-                microsoftTitles();
-        blizzardTitles();
+                merge(microsoftTitles(), blizzardTitles());
 
         //don't change below this line
         StepVerifier.create(microsoftBlizzardCorp)
@@ -328,9 +331,14 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     @Test
     public void car_factory() {
         //todo: feel free to change code as you need
-        Flux<Car> producedCars = null;
-        carChassisProducer();
-        carEngineProducer();
+//        Flux<Car> producedCars = Flux.zip(carChassisProducer(), carEngineProducer())
+//                        .map(stream -> new Car(stream.getT1(), stream.getT2()));
+
+        Flux<Car> producedCars = Flux.zip(
+                    carChassisProducer(),
+                    carEngineProducer(),
+                    (stream1, stream2) -> new Car(stream1, stream2)
+                );
 
         //don't change below this line
         StepVerifier.create(producedCars)
@@ -347,15 +355,20 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
      */
 
     //only read from sourceRef
-    AtomicReference<String> sourceRef = new AtomicReference<>("X");
+    AtomicReference<String> sourceRef = new AtomicReference<>("A");
 
     //todo: implement this method based on instructions
     public Mono<String> chooseSource() {
-        sourceA(); //<- choose if sourceRef == "A"
-        sourceB(); //<- choose if sourceRef == "B"
-        return Mono.empty(); //otherwise, return empty
+        return Mono.defer( () -> {
+            if ("A".equals(sourceRef.get())) {
+                return sourceA(); //<- choose if sourceRef == "A"
+            } else if ("B".equals(sourceRef.get())) {
+                return sourceB();
+            } else {
+                return Mono.empty(); //otherwise, return empty
+            }
+        });
     }
-
     @Test
     public void deterministic() {
         //don't change below this line
@@ -385,8 +398,9 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
 
         //todo: feel free to change code as you need
         Flux<String> stream = StreamingConnection.startStreaming()
-                                                 .flatMapMany(Function.identity());
-        StreamingConnection.closeConnection();
+                .flatMapMany(Function.identity())
+                .doFinally(signalType -> StreamingConnection.closeConnection());
+//        StreamingConnection.closeConnection();
 
         //don't change below this line
         StepVerifier.create(stream)
