@@ -104,8 +104,9 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
     public void error_reporter() {
         //todo: feel free to change code as you need
         Flux<String> messages = messageNode()
-                .doOnError(this::errorReportService);
-               // .doOnErrorResume(e ->errorReportService(e) );
+                .onErrorResume(e ->
+                        errorReportService(e)
+                        .then(Mono.error(e)));
 
 
         //don't change below this line

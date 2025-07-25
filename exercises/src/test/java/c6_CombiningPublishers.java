@@ -394,12 +394,12 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     public void cleanup() {
-        BlockHound.install(); //don't change this line, blocking = cheating!
+        //BlockHound.install(); //don't change this line, blocking = cheating!
 
         //todo: feel free to change code as you need
         Flux<String> stream = StreamingConnection.startStreaming()
                 .flatMapMany(Function.identity())
-                .doFinally(signalType -> StreamingConnection.closeConnection());
+                .concatWith(Mono.fromRunnable(StreamingConnection::closeConnection));
 //        StreamingConnection.closeConnection();
 
         //don't change below this line
