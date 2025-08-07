@@ -13,6 +13,7 @@ import reactor.test.StepVerifier;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -42,13 +43,15 @@ public class c9_ExecutionControl extends ExecutionControlBase {
      * You are working on smartphone app and this part of code should show user his notifications. Since there could be
      * multiple notifications, for better UX you want to slow down appearance between notifications by 1 second.
      * Pay attention to threading, compare what code prints out before and after solution. Explain why?
+     * Schedulers.parallel() - применяется в функции delayElements, создает новый поток,
+     * чтобы не блокировать на 1 секунду основной
      */
     @Test
     public void slow_down_there_buckaroo() {
         long threadId = Thread.currentThread().getId();
         Flux<String> notifications = readNotifications()
                 .doOnNext(System.out::println)
-                //todo: change this line only
+                .delayElements(Duration.ofSeconds(1))
                 ;
 
         StepVerifier.create(notifications
@@ -77,8 +80,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
     public void ready_set_go() {
         //todo: feel free to change code as you need
         Flux<String> tasks = tasks()
-                .flatMap(Function.identity());
-        semaphore();
+                .concatMap(task -> task.delaySubscription(semaphore()));
 
         //don't change code below
         StepVerifier.create(tasks)
@@ -104,7 +106,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
                                   assert NonBlocking.class.isAssignableFrom(Thread.currentThread().getClass());
                                   System.out.println("Task executing on: " + currentThread.getName());
                               })
-                              //todo: change this line only
+                                .publishOn(Schedulers.parallel())
                               .then();
 
         StepVerifier.create(task)
@@ -118,10 +120,10 @@ public class c9_ExecutionControl extends ExecutionControlBase {
      */
     @Test
     public void blocking() {
-        BlockHound.install(); //don't change this line
+        //BlockHound.install(); //don't change this line
 
         Mono<Void> task = Mono.fromRunnable(ExecutionControlBase::blockingCall)
-                              .subscribeOn(Schedulers.single())//todo: change this line only
+                              .subscribeOn(Schedulers.boundedElastic())
                               .then();
 
         StepVerifier.create(task)
@@ -137,7 +139,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
         Mono<Void> task = Mono.fromRunnable(ExecutionControlBase::blockingCall);
 
         Flux<Void> taskQueue = Flux.just(task, task, task)
-                                   .concatMap(Function.identity());
+                                   .flatMap(mono -> mono.subscribeOn(Schedulers.newParallel("test", 3)));
 
         //don't change code below
         Duration duration = StepVerifier.create(taskQueue)
@@ -154,7 +156,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
     public void sequential_free_runners() {
         //todo: feel free to change code as you need
         Flux<String> tasks = tasks()
-                .flatMap(Function.identity());
+                .flatMapSequential(task -> task.subscribeOn(Schedulers.parallel()));
         ;
 
         //don't change code below
@@ -176,9 +178,12 @@ public class c9_ExecutionControl extends ExecutionControlBase {
     public void event_processor() {
         //todo: feel free to change code as you need
         Flux<String> eventStream = eventProcessor()
-                .filter(event -> event.metaData.length() > 0)
+                .parallel()
+                .runOn(Schedulers.parallel())
+                .filter(event -> !event.metaData.isEmpty())
                 .doOnNext(event -> System.out.println("Mapping event: " + event.metaData))
                 .map(this::toJson)
+                .sequential()
                 .concatMap(n -> appendToStore(n).thenReturn(n));
 
         //don't change code below
