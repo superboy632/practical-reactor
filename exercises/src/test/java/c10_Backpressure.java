@@ -47,8 +47,8 @@ public class c10_Backpressure extends BackpressureBase {
     public void request_and_demand() {
         CopyOnWriteArrayList<Long> requests = new CopyOnWriteArrayList<>();
         Flux<String> messageStream = messageStream1()
-                //todo: change this line only
-                ;
+                .onBackpressureBuffer()
+                .doOnRequest(requests::add);
 
         StepVerifier.create(messageStream, StepVerifierOptions.create().initialRequest(0))
                     .expectSubscription()
@@ -71,6 +71,9 @@ public class c10_Backpressure extends BackpressureBase {
     public void limited_demand() {
         CopyOnWriteArrayList<Long> requests = new CopyOnWriteArrayList<>();
         Flux<String> messageStream = messageStream2()
+                .onBackpressureBuffer()
+                .doOnRequest(requests::add)
+                .limitRate(1);
                 //todo: do your changes here
                 ;
 
@@ -94,7 +97,7 @@ public class c10_Backpressure extends BackpressureBase {
     @Test
     public void uuid_generator() {
         Flux<UUID> uuidGenerator = Flux.create(sink -> {
-            //todo: do your changes here
+           sink.next(UUID.randomUUID());
         });
 
         StepVerifier.create(uuidGenerator
