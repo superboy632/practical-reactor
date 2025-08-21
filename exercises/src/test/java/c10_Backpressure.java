@@ -182,15 +182,16 @@ public class c10_Backpressure extends BackpressureBase {
                     //todo: do your changes only within BaseSubscriber class implementation
                     @Override
                     protected void hookOnSubscribe(Subscription subscription) {
-                        for (int i = 0; i < 10; i++) {
-                            sub.set(subscription);
-                        }
+                       sub.set(subscription);
+                       subscription.request(10);
                     }
 
                     @Override
                     protected void hookOnNext(String s) {
                         System.out.println(s);
-                        count.incrementAndGet();
+                        if(count.incrementAndGet() >= 10) {
+                            sub.get().cancel();
+                        }
                     }
                     //-----------------------------------------------------
                 });
