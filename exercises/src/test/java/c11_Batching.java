@@ -29,7 +29,6 @@ public class c11_Batching extends BatchingBase {
      */
     @Test
     public void batch_writer() {
-        //todo do your changes here
         Flux<Void> dataStream = dataStream()
                 .buffer(10)
                 .flatMap(this::writeToDisk);
@@ -50,7 +49,6 @@ public class c11_Batching extends BatchingBase {
      */
     @Test
     public void command_gateway() {
-        //todo: implement your changes here
         Flux<Void> processCommands = inputCommandStream()
                 .groupBy(command -> command.getAggregateId())
                 .flatMap(group ->
